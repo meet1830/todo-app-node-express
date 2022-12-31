@@ -5,12 +5,16 @@ const mongoose = require("mongoose");
 const UserSchema = require("./UserSchema");
 const session = require("express-session");
 const mongoDBSession = require("connect-mongodb-session")(session);
+const jwt = require("jsonwebtoken");
+
 //models
 const TodoModel = require("./models/TodoModel");
 
 //middlewares
 const {
   cleanUpAndValidate,
+  jwtSign,
+  sendVerifcationEmail,
 } = require("./utils/AuthUtils");
 const isAuth = require("./middleware/isAuth");
 const rateLimitng = require("./middleware/rateLimiting");
@@ -89,6 +93,7 @@ app.post("/register", async (req, res) => {
     username: username,
     password: hashedPassword,
     email: email,
+    emailAuthenticated: false,
   });
 
   //check if the user already exits
@@ -111,11 +116,25 @@ app.post("/register", async (req, res) => {
     });
   }
 
-  //genrate a token
+  //generate a token
+  const verificationToken = jwtSign(email);
+  console.log(verificationToken);
   try {
     const userDB = await user.save(); // create opt in database
     console.log(userDB);
-    res.redirect("/login");
+    // res.redirect("/login");
+    sendVerifcationEmail(email, verificationToken);
+
+    return res.send({
+      status: 200,
+      message:
+        "Verification has been sent to your mail Id. Please verify before login",
+      data: {
+        _id: userDB._id,
+        username: userDB.username,
+        email: userDB.email,
+      },
+    });
   } catch (err) {
     return res.send({
       status: 400,
@@ -123,6 +142,31 @@ app.post("/register", async (req, res) => {
       error: err,
     });
   }
+});
+
+app.get("/verifyEmail/:id", (req, res) => {
+  const token = req.params.id;
+  console.log(req.params);
+  jwt.verify(token, "backendnodejs", async (err, verifiedJwt) => {
+    if (err) res.send(err);
+
+    console.log(verifiedJwt);
+
+    const userDb = await UserSchema.findOneAndUpdate(
+      { email: verifiedJwt.email },
+      { emailAuthenticated: true }
+    );
+    console.log(userDb);
+    if (userDb) {
+      return res.status(200).redirect("/login");
+    } else {
+      return res.send({
+        status: 400,
+        message: "Invalid Session link",
+      });
+    }
+  });
+  return res.status(200);
 });
 
 app.post("/login", async (req, res) => {
@@ -162,7 +206,15 @@ app.post("/login", async (req, res) => {
       });
     }
 
-    //comapre the password
+    // check for email authentication
+    if (userDB.emailAuthenticated === false) {
+      return res.send({
+        status: 400,
+        message: "Please verifiy your mailid",
+      });
+    }
+
+    //compare the password
     const isMatch = await bcrypt.compare(password, userDB.password);
 
     if (!isMatch) {
