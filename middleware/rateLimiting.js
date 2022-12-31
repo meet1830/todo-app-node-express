@@ -26,7 +26,7 @@ const rateLimitng = async (req, res, next) => {
   const previousAccessTime = sessionTimeDb.time;
   const currentAccessTime = Date.now();
 
-  if (currentAccessTime - previousAccessTime < 2000) {
+  if (currentAccessTime - previousAccessTime < 500) {
     return res.send({
       status: 400,
       message: "Too many request. Please try in some time",

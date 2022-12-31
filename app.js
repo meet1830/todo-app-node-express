@@ -13,6 +13,7 @@ const TodoModel = require("./models/TodoModel");
 //middlewares
 const {
   cleanUpAndValidate,
+  cleanUpAndValidateProfile,
   jwtSign,
   sendVerifcationEmail,
 } = require("./utils/AuthUtils");
@@ -72,11 +73,72 @@ app.get("/register", (req, res) => {
   return res.render("register");
 });
 
+app.post("/profile", isAuth, async (req, res) => {
+  // console.log(req.body);
+  const { name, username, phone, email, password, college, state, country } =
+    req.body;
+
+  try {
+    await cleanUpAndValidateProfile({ password, college, state, country });
+  } catch (err) {
+    return res.send({
+      status: 400,
+      message: err,
+    });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 7);
+
+  let user = new UserSchema({
+    name: name,
+    username: username,
+    password: hashedPassword,
+    email: email,
+    phone: phone,
+    emailAuthenticated: false,
+    college: college,
+    state: state,
+    country: country,
+  });
+
+  let userExists;
+  try {
+    userExists = await UserSchema.findOne({ email });
+  } catch (err) {
+    return res.send({
+      status: 400,
+      message: "User not found",
+      error: err,
+    });
+  }
+
+  if (userExists) {
+    try {
+      userExists = await UserSchema.findOneAndUpdate(
+        { email: email },
+        {"$set": { password: hashedPassword, college: college, state: state, country: country }},
+      );
+      // return res.send({
+      //   status: 200,
+      //   message: "Details updated",
+      // });
+    } catch (err) {
+      return res.send({
+        status: 400,
+        message: "Details not updated, Please try again",
+        error: err,
+      });
+    }
+  }
+
+
+});
+
 app.post("/register", async (req, res) => {
   console.log(req.body);
-  const { name, email, username, password } = req.body;
+  const { name, email, username, phone, password } = req.body;
   try {
-    await cleanUpAndValidate({ name, password, email, username });
+    await cleanUpAndValidate({ name, password, email, username, phone });
   } catch (err) {
     return res.send({
       status: 400,
@@ -93,7 +155,11 @@ app.post("/register", async (req, res) => {
     username: username,
     password: hashedPassword,
     email: email,
+    phone: phone,
     emailAuthenticated: false,
+    college: "",
+    state: "",
+    country: "",
   });
 
   //check if the user already exits
@@ -233,7 +299,7 @@ app.post("/login", async (req, res) => {
       userId: userDB._id,
     };
 
-    res.redirect("/dashboard");
+    res.redirect("/profile");
   } catch (err) {
     return res.send({
       status: 400,
@@ -250,12 +316,12 @@ app.get("/home", isAuth, (req, res) => {
     });
   } else {
     return res.send({
-      message: "Please Logged in again",
+      message: "Please login again",
     });
   }
 });
 
-app.post("/logout", isAuth, (req, res) => {
+app.post("/logout", isAuth, rateLimitng, (req, res) => {
   req.session.destroy((err) => {
     if (err) throw err;
 
@@ -263,7 +329,7 @@ app.post("/logout", isAuth, (req, res) => {
   });
 });
 
-app.post("/logout_from_all_devices", isAuth, async (req, res) => {
+app.post("/logout_from_all_devices", isAuth, rateLimitng, async (req, res) => {
   console.log(req.session.user.username);
   const username = req.session.user.username;
 
@@ -309,7 +375,23 @@ app.get("/dashboard", isAuth, async (req, res) => {
   res.render("dashboard");
 });
 
-app.post("/pagination_dashboard", isAuth, async (req, res) => {
+app.post("/profileDetails", isAuth, async (req, res) => {
+  try {
+    let currUser = await UserSchema.find({ username: req.session.user.username });
+    return res.send({
+        status: 200,
+        message: "Read successful",
+        data: currUser
+    })
+  } catch (err) {
+    return res.send({
+      status: 400,
+      message: "Database Error. Please try again",
+    });
+  }
+})
+
+app.post("/pagination_dashboard", isAuth, rateLimitng, async (req, res) => {
   const skip = req.query.skip || 0;
   const LIMIT = 5;
   const username = req.session.user.username;
@@ -377,7 +459,7 @@ app.post("/create-item", isAuth, rateLimitng, async (req, res) => {
   }
 });
 
-app.post("/edit-item", isAuth, async (req, res) => {
+app.post("/edit-item", isAuth, rateLimitng, async (req, res) => {
   const id = req.body.id;
   const newData = req.body.newData;
   console.log(req.body);
@@ -408,7 +490,7 @@ app.post("/edit-item", isAuth, async (req, res) => {
   }
 });
 
-app.post("/delete-item", isAuth, async (req, res) => {
+app.post("/delete-item", isAuth, rateLimitng, async (req, res) => {
   const id = req.body.id;
   console.log(req.body);
   if (!id) {
@@ -436,33 +518,12 @@ app.post("/delete-item", isAuth, async (req, res) => {
   }
 });
 
+app.get("/profile", isAuth, (req, res) => {
+  return res.render("profile");
+});
+
 const PORT = process.env.PORT || 8000;
 
 app.listen(PORT, () => {
   console.log(`Listenning on port ${PORT}`);
 });
-
-//Create an ejs Template for register and loggin
-//hashed Password
-//Create a mongoDB connection
-//User Schema
-
-//lecture 7
-//checkuser before insertion /register
-
-//'/login'
-//validate the data
-//find user using either mail or username
-//for found user matched the password
-//include session info to check futher
-//adding session and on database
-
-//dashboard template
-//'logout' and 'logout from all devices
-//isAuth
-
-//create item, edit item, delete item
-//axios package
-//browser
-//pagination
-//rate limiting
