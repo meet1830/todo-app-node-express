@@ -33,7 +33,7 @@ const cleanUpAndValidateProfile = ({password, college, state, country}) => {
     if (typeof state != "string") reject("Invalid state");      
     if (typeof country != "string") reject("Invalid country");
 
-    if (!password || !college || !state || !country) reject("Invalid Data");
+    if (!password || !college || !state || !country) reject("Please fill all the fields");
 
     if (password.length < 5) reject("Password too short");
     if (password.length > 200) reject("Password too long");

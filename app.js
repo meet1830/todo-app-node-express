@@ -24,7 +24,7 @@ const app = express();
 
 app.set("view engine", "ejs");
 
-//connection with
+// connection with mongoose
 mongoose.set("strictQuery", false);
 const mongoURI = `mongodb+srv://meet:12345@cluster0.twhduo8.mongodb.net/test`;
 mongoose
@@ -60,7 +60,6 @@ app.use(
   })
 );
 
-//routes
 app.get("/", (req, res) => {
   res.send("Welcome to my app");
 });
@@ -69,7 +68,7 @@ app.get("/login", (req, res) => {
   return res.render("login");
 });
 
-app.get("/register", (req, res) => {
+app.get("/registration", (req, res) => {
   return res.render("register");
 });
 
@@ -118,10 +117,10 @@ app.post("/profile", isAuth, async (req, res) => {
         { email: email },
         {"$set": { password: hashedPassword, college: college, state: state, country: country }},
       );
-      // return res.send({
-      //   status: 200,
-      //   message: "Details updated",
-      // });
+      return res.send({
+        status: 200,
+        message: "Details updated",
+      });
     } catch (err) {
       return res.send({
         status: 400,
@@ -134,7 +133,7 @@ app.post("/profile", isAuth, async (req, res) => {
 
 });
 
-app.post("/register", async (req, res) => {
+app.post("/registration", async (req, res) => {
   console.log(req.body);
   const { name, email, username, phone, password } = req.body;
   try {
@@ -146,8 +145,6 @@ app.post("/register", async (req, res) => {
     });
   }
 
-  //abc123 --> shjsiohc484798@!#
-  //bcrypt : md5
   const hashedPassword = await bcrypt.hash(password, 7);
 
   let user = new UserSchema({
@@ -163,7 +160,6 @@ app.post("/register", async (req, res) => {
   });
 
   //check if the user already exits
-
   let userExists;
   try {
     userExists = await UserSchema.findOne({ email });
@@ -182,11 +178,11 @@ app.post("/register", async (req, res) => {
     });
   }
 
-  //generate a token
+  // generate a token
   const verificationToken = jwtSign(email);
   console.log(verificationToken);
   try {
-    const userDB = await user.save(); // create opt in database
+    const userDB = await user.save();
     console.log(userDB);
     // res.redirect("/login");
     sendVerifcationEmail(email, verificationToken);
@@ -250,8 +246,6 @@ app.post("/login", async (req, res) => {
       message: "Invalid Data",
     });
   }
-  //find return multiple obj inside an array
-  //findOne return one object or null
 
   let userDB;
 
@@ -280,7 +274,7 @@ app.post("/login", async (req, res) => {
       });
     }
 
-    //compare the password
+    // compare the password
     const isMatch = await bcrypt.compare(password, userDB.password);
 
     if (!isMatch) {
@@ -291,7 +285,6 @@ app.post("/login", async (req, res) => {
       });
     }
 
-    //final return
     req.session.isAuth = true;
     req.session.user = {
       username: userDB.username,
@@ -356,22 +349,6 @@ app.post("/logout_from_all_devices", isAuth, rateLimitng, async (req, res) => {
 });
 
 app.get("/dashboard", isAuth, async (req, res) => {
-  // let todos = [];
-
-  // try {
-  //   todos = await TodoModel.find({ username: req.session.user.username });
-  //   // return res.send({
-  //   //     status: 200,
-  //   //     message: "Read successful",
-  //   //     data: todos
-  //   // })
-  //   console.log(todos);
-  // } catch (err) {
-  //   return res.send({
-  //     status: 400,
-  //     message: "Database Error. Please try again",
-  //   });
-  // }
   res.render("dashboard");
 });
 

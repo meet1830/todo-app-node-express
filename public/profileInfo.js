@@ -20,23 +20,6 @@ function getProfileDetails() {
         console.log(res.data.data[0]);
 
         const currUser = res.data.data[0];
-  
-        // document.getElementById("item_list").insertAdjacentHTML(
-        //   "beforeend",
-        //   todoList
-        //     .map((item) => {
-        //       return `<li class="list-group-item list-group-item-action d-flex align-items-center justify-content-between">
-        //     <span class="item-text"> ${item.todo} </span>
-        //     <div>
-        //     <button data-id="${item._id}" class="edit-me btn btn-secondary btn-sm mr-1">Edit</button>
-        //     <button data-id="${item._id}" class="delete-me btn btn-danger btn-sm">Delete</button>
-        // </div>
-        // </li>`;
-        //     })
-        //     .join("")
-        // );
-  
-        // skip += todoList.length;
 
         document.getElementById("profile-input-name").setAttribute("value", currUser.name);
         document.getElementById("profile-input-username").setAttribute("value", currUser.username);
