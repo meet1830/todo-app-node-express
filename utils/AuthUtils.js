@@ -53,7 +53,7 @@ const sendVerifcationEmail = (email, verificationToken) => {
     from: sender,
     to: email,
     subject: "Email Verification for Todo App",
-    html: `Press <a href=http://localhost:8000/verifyEmail/${verificationToken}> Here </a> to verify your account.`,
+    html: `Press <a href=https://todo-copy-2-production.up.railway.app/verifyEmail/${verificationToken}> Here </a> to verify your account.`,
   };
 
   mailer.sendMail(mailOptions, function (err, response) {
